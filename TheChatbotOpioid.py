@@ -7,18 +7,25 @@ from dotenv import load_dotenv
 # Load environment variables
 env_path = ".env.txt"
 load_dotenv(env_path)
+
+# Ensure API key is loaded
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Debugging: Check if API key is loaded
-print(f"OpenAI API Key: {openai.api_key}")  # Remove this after confirming it works
+# Debug: Check if API key is loading on Render
+print(f"OpenAI API Key Loaded: {openai.api_key is not None}")
 
 app = Flask(__name__)
 
-PDF_PATH = "OpioidInfo.pdf"
+# Use absolute path for PDF (Render stores files in /opt/render/project/src/)
+PDF_PATH = "/opt/render/project/src/OpioidInfo.pdf"
 
 def extract_text_from_pdf(pdf_path):
     text = ""
     try:
+        if not os.path.exists(pdf_path):
+            print(f"PDF file not found: {pdf_path}")
+            return "PDF file not found."
+
         with pdfplumber.open(pdf_path) as pdf:
             for page in pdf.pages:
                 extracted_text = page.extract_text()
@@ -27,6 +34,7 @@ def extract_text_from_pdf(pdf_path):
         print(f"Extracted PDF Text (first 500 chars): {text[:500]}")  # Debugging
     except Exception as e:
         print(f"Error loading PDF: {str(e)}")  # Debugging
+        return f"Error loading PDF: {str(e)}"
     return text.strip()
 
 pdf_text = extract_text_from_pdf(PDF_PATH)
@@ -60,6 +68,7 @@ def get_gpt3_response(question, context):
     )
 
     try:
+        print(f"Making API call to OpenAI with question: {question}")  # Debugging
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -84,7 +93,7 @@ def index():
 
 @app.route("/ask", methods=["POST"])
 def ask():
-    user_question = request.form.get("question", "")
+    user_question = request.form.get("question", "").strip()
 
     if not user_question:
         return jsonify({"answer": "Please ask a valid question."})
@@ -96,8 +105,8 @@ def ask():
 
     return jsonify({"answer": answer})
 
-application = app
+# Required for Render deployment
+application = app  
 
 if __name__ == "__main__":
     app.run()
-
