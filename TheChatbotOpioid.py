@@ -4,16 +4,19 @@ import os
 import pdfplumber
 from dotenv import load_dotenv
 
-env_path = ".env.txt"
-load_dotenv(env_path)
+# Load OpenAI API Key from Environment Variables (Render)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 app = Flask(__name__)
 
-PDF_PATH = "OpioidInfo.pdf"
+# Ensure the PDF file is correctly located
+PDF_PATH = os.path.join(os.path.dirname(__file__), "OpioidInfo.pdf")
 
 def extract_text_from_pdf(pdf_path):
     text = ""
+    if not os.path.exists(pdf_path):
+        return "Error: PDF file not found."
+    
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
             extracted_text = page.extract_text()
@@ -55,6 +58,7 @@ def ask():
 
     return jsonify({"answer": answer})
 
-application = app
+# Render requires 0.0.0.0 with dynamic port
 if __name__ == "__main__":
-    app.run()
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
