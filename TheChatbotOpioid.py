@@ -5,7 +5,7 @@ import pdfplumber
 from dotenv import load_dotenv
 
 
-env_path = ".env.txt"
+env_path = .env.txt"
 load_dotenv(env_path)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -86,5 +86,6 @@ def ask():
 
     return jsonify({"answer": answer})
 
+application = app
 if __name__ == "__main__":
     app.run(debug=True)
