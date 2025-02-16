@@ -7,66 +7,51 @@ from openai import OpenAI  # Updated OpenAI import
 # Load environment variables
 load_dotenv()
 
-# Initialize OpenAI client with the API key
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 app = Flask(__name__)
 
-# Use a relative path for the PDF
-PDF_PATH = os.path.join(os.path.dirname(__file__), "PDFs", "OpioidInfo.pdf")
+# Load OpenAI API key from Render's secret file
+try:
+    with open("/etc/secrets/OPENAI_API_KEY", "r") as f:
+        openai_api_key = f.read().strip()
+except FileNotFoundError:
+    openai_api_key = os.getenv("OPENAI_API_KEY")  # Fallback for local testing
 
-def extract_text_from_pdf(pdf_path):
-    """Extracts text from a PDF file."""
-    text = ""
-    with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages:
-            extracted_text = page.extract_text()
-            if extracted_text:
-                text += extracted_text + "\n"
-    return text.strip()
+# Ensure API key is available
+if not openai_api_key:
+    raise ValueError("Missing OpenAI API key!")
 
-# Extract text from the PDF
-pdf_text = extract_text_from_pdf(PDF_PATH)
-
-def get_gpt3_response(question, context):
-    """Gets a response from OpenAI based on the provided document."""
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "Answer the user's question based on the provided document."},
-                {"role": "user", "content": f"Here is the document content:\n{context}\n\nQuestion: {question}"}
-            ],
-            max_tokens=2048,
-            temperature=0.7,
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        return f"An error occurred: {str(e)}"
+# OpenAI API client
+openai.api_key = openai_api_key
 
 @app.route("/")
-def index():
-    """Renders the chatbot UI."""
-    return render_template("index.html")  
+def home():
+    return "Chatbot API is running!"
 
-@app.route("/ask", methods=["POST"])
-def ask():
-    """Handles user questions and returns a chatbot response."""
-    user_question = request.form.get("question", "")
+@app.route("/chat", methods=["POST"])
+def chat():
+    data = request.json
+    user_input = data.get("message", "")
+    mode = data.get("mode", "text")  # "text" or "speech"
 
-    if not user_question:
-        return jsonify({"answer": "Please ask a valid question."})
+    if not user_input:
+        return jsonify({"error": "Message is required!"}), 400
 
-    answer = get_gpt3_response(user_question, pdf_text)
-    
-    return jsonify({"answer": answer})
+    try:
+        # OpenAI API call
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5", 
+            messages=[{"role": "user", "content": user_input}]
+        )
+        bot_reply = response["choices"][0]["message"]["content"]
 
-# Gunicorn expects 'application' as the entry point
-application = app  
+        return jsonify({
+            "reply": bot_reply,
+            "mode": mode  # Indicate whether to use speech or text output
+        })
+
+    except openai.OpenAIError as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    application.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
-
-
+    app.run(host="0.0.0.0", port=5000)
 
