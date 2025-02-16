@@ -21,7 +21,7 @@ if not openai_api_key:
     raise ValueError("Missing OpenAI API key!")
 
 # OpenAI API client
-openai.api_key = openai_api_key
+OpenAI.api_key = openai_api_key 
 
 @app.route("/")
 def home():
