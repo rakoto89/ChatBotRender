@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template 
 import openai
 import os
 import pdfplumber
@@ -25,36 +25,12 @@ def extract_text_from_pdf(pdf_path):
 
 pdf_text = extract_text_from_pdf(PDF_PATH)
 
-def is_question_relevant(question):
-    relevance_prompt = (
-        "Determine if the following question is related to opioids OR related topics such as overdose, withdrawal, "
-        "prescription painkillers, fentanyl, narcotics, analgesics, opiates, opioid crisis, addiction, naloxone, or rehab. "
-        "Respond with 'yes' if it is related and 'no' if it is not.\n\n"
-        f"Question: {question}"
-    )
-    
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": relevance_prompt}],
-            max_tokens=10,
-            temperature=0,
-        )
-        return response['choices'][0]['message']['content'].strip().lower() == "yes"
-    except Exception:
-        return False
-
 def get_gpt3_response(question, context):
-    opioid_context = (
-        "Assume the user is always asking about opioids or related topics like overdose, addiction, withdrawal, "
-        "painkillers, fentanyl, heroin, and narcotics, even if they don't explicitly mention 'opioids'."
-    )
-
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": opioid_context},
+                {"role": "system", "content": "Answer the user's question based on the provided document."},
                 {"role": "user", "content": f"Here is the document content:\n{context}\n\nQuestion: {question}"}
             ],
             max_tokens=2048,
@@ -77,15 +53,13 @@ def ask():
     if not user_question:
         return jsonify({"answer": "Please ask a valid question."})
 
-    if is_question_relevant(user_question):
-        answer = get_gpt3_response(user_question, pdf_text)
-    else:
-        answer = "Sorry, I can only answer questions related to opioids, addiction, overdose, or withdrawal."
-
+    answer = get_gpt3_response(user_question, pdf_text)
+    
     return jsonify({"answer": answer})
 
 application = app  # Gunicorn expects this
 
 if __name__ == "__main__":
     application.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
 
