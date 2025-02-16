@@ -1,13 +1,14 @@
-from flask import Flask, request, jsonify, render_template 
-import openai
+from flask import Flask, request, jsonify, render_template
 import os
 import pdfplumber
 from dotenv import load_dotenv
+from openai import OpenAI
 
 # Load environment variables
 load_dotenv()
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = Flask(__name__)
 
@@ -15,6 +16,7 @@ app = Flask(__name__)
 PDF_PATH = os.path.join(os.path.dirname(__file__), "PDFs", "OpioidInfo.pdf")
 
 def extract_text_from_pdf(pdf_path):
+    """Extract text from a given PDF file."""
     text = ""
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
@@ -26,8 +28,9 @@ def extract_text_from_pdf(pdf_path):
 pdf_text = extract_text_from_pdf(PDF_PATH)
 
 def get_gpt3_response(question, context):
+    """Generate a response using OpenAI's GPT-3.5-turbo model."""
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "Answer the user's question based on the provided document."},
@@ -36,19 +39,19 @@ def get_gpt3_response(question, context):
             max_tokens=2048,
             temperature=0.7,
         )
-        return response['choices'][0]['message']['content'].strip()
-    except openai.error.AuthenticationError:
-        return "Authentication error: Check your OpenAI API key."
+        return response.choices[0].message.content.strip()
     except Exception as e:
         return f"An error occurred: {str(e)}"
 
 @app.route("/")
 def index():
-    return render_template("index.html")  
+    """Render the main chat interface."""
+    return render_template("index.html")
 
 @app.route("/ask", methods=["POST"])
 def ask():
-    user_question = request.form.get("question", "")
+    """Handle user questions and return responses."""
+    user_question = request.form.get("question", "").strip()
 
     if not user_question:
         return jsonify({"answer": "Please ask a valid question."})
@@ -57,9 +60,11 @@ def ask():
     
     return jsonify({"answer": answer})
 
-application = app  # Gunicorn expects this
+# Gunicorn expects an 'application' variable
+application = app  
 
 if __name__ == "__main__":
     application.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
 
 
