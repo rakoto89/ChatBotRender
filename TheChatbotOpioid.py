@@ -28,9 +28,9 @@ pdf_text = extract_text_from_pdf(PDF_PATH)
 
 def is_question_relevant(question):
     relevance_prompt = (
-        "Determine if the following question is related to opioids OR related topics such as overdose, withdrawal, "
-        "prescription painkillers, fentanyl, narcotics, analgesics, opiates, opioid crisis, addiction, naloxone, or rehab. "
-        "Respond with 'yes' if it is related and 'no' if it is not.\n\n"
+        "Does the following question relate to opioids or related topics such as overdose, withdrawal, "
+        "prescription painkillers, fentanyl, narcotics, analgesics, opiates, opioid crisis, addiction, naloxone, or rehab? "
+        "Answer with a single word: 'yes' or 'no'.\n\n"
         f"Question: {question}"
     )
     
@@ -41,8 +41,14 @@ def is_question_relevant(question):
             max_tokens=10,
             temperature=0,
         )
-        return response['choices'][0]['message']['content'].strip().lower() == "yes"
-    except Exception:
+        
+        answer = response['choices'][0]['message']['content'].strip().lower()
+        print(f"Relevance check response: {answer}")  # Debugging output
+
+        # More flexible check: Accept "yes" even if extra words appear
+        return "yes" in answer  
+    except Exception as e:
+        print(f"Relevance check error: {str(e)}")  # Debugging
         return False
 
 
