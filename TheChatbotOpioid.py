@@ -4,7 +4,6 @@ import os
 import pdfplumber
 from dotenv import load_dotenv
 
-
 env_path = ".env.txt"
 load_dotenv(env_path)
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -12,7 +11,6 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 app = Flask(__name__)
 
 PDF_PATH = "OpioidInfo.pdf"
-
 
 def extract_text_from_pdf(pdf_path):
     text = ""
@@ -24,7 +22,6 @@ def extract_text_from_pdf(pdf_path):
     return text.strip()
 
 pdf_text = extract_text_from_pdf(PDF_PATH)
-
 
 def is_question_relevant(question):
     relevance_prompt = (
@@ -51,7 +48,6 @@ def is_question_relevant(question):
         print(f"Relevance check error: {str(e)}")  # Debugging
         return False
 
-
 def get_gpt3_response(question, context):
     opioid_context = (
         "Assume the user is always asking about opioids or related topics like overdose, addiction, withdrawal, "
@@ -63,7 +59,7 @@ def get_gpt3_response(question, context):
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": opioid_context},
-                {"role": "user", "content": f"Here is the document content:\n{context}\n\nQuestion: {question}"}
+                {"role": "user", "content": f"Here is the document content:\n{context[:1000]}\n\nQuestion: {question}"}
             ],
             max_tokens=2048,
             temperature=0.7,
@@ -72,6 +68,7 @@ def get_gpt3_response(question, context):
     except openai.error.AuthenticationError:
         return "Authentication error: Check your OpenAI API key."
     except Exception as e:
+        print(f"Error in GPT-3 response: {str(e)}")  # Debugging
         return f"An error occurred: {str(e)}"
 
 @app.route("/")
@@ -85,6 +82,9 @@ def ask():
     if not user_question:
         return jsonify({"answer": "Please ask a valid question."})
 
+    # Debugging the user's question
+    print(f"User question: {user_question}")
+
     if is_question_relevant(user_question):
         answer = get_gpt3_response(user_question, pdf_text)
     else:
@@ -92,8 +92,9 @@ def ask():
 
     return jsonify({"answer": answer})
 
+# Debugging the PDF extraction (Check the first 1000 characters)
+print(f"Extracted PDF text (first 1000 chars): {pdf_text[:1000]}")
+
 application = app
 if __name__ == "__main__":
     app.run()
-
-
