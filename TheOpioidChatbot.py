@@ -5,7 +5,7 @@ import pdfplumber
 from dotenv import load_dotenv
 
 
-env_path = r"C:\Users\Robin\iCloudDrive\Desktop\INSS 780\chatbot\LLM Project\Chatbot Project\.env.txt"
+env_path = ".env.txt"
 load_dotenv(env_path)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
