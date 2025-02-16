@@ -4,12 +4,14 @@ import os
 import pdfplumber
 from dotenv import load_dotenv
 
+# Load the environment variables
 env_path = ".env.txt"
 load_dotenv(env_path)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 app = Flask(__name__)
 
+# Path to the PDF file
 PDF_PATH = "OpioidInfo.pdf"
 
 # Function to extract text from the PDF
@@ -22,6 +24,7 @@ def extract_text_from_pdf(pdf_path):
                 text += extracted_text + "\n"
     return text.strip()
 
+# Extract the text from the PDF file
 pdf_text = extract_text_from_pdf(PDF_PATH)
 
 # Debugging: Check the first 1000 characters of extracted PDF text
@@ -59,7 +62,7 @@ def is_question_relevant(question):
 def get_gpt3_response(question, context):
     opioid_context = (
         "Assume the user is always asking about opioids or related topics like overdose, addiction, withdrawal, "
-        "painkillers, fentanyl, heroin, and narcotics, even if they don't explicitly mention 'opioids'."
+        "painkillers, fentanyl, heroin, and narcotics, even if they don't explicitly mention 'opioids.'"
     )
 
     try:
@@ -117,4 +120,3 @@ print(f"Extracted PDF text (first 1000 chars): {pdf_text[:1000]}")
 application = app
 if __name__ == "__main__":
     app.run()
-
