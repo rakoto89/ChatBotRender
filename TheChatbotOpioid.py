@@ -49,8 +49,8 @@ def is_question_relevant(question):
             temperature=0,
         )
         return response['choices'][0]['message']['content'].strip().lower() == "yes"
-    except openai.error.OpenAIError as e:
-        print(f"OpenAI error occurred: {e}")
+    except Exception as e:
+        print(f"Error occurred in is_question_relevant: {e}")
         return False
 
 def get_gpt3_response(question, context):
@@ -72,10 +72,8 @@ def get_gpt3_response(question, context):
         return response['choices'][0]['message']['content'].strip()
     except openai.error.AuthenticationError:
         return "Authentication error: Check your OpenAI API key."
-    except openai.error.OpenAIError as e:
-        print(f"OpenAI error occurred: {e}")
-        return f"An error occurred: {str(e)}"
     except Exception as e:
+        print(f"Error occurred in get_gpt3_response: {e}")
         return f"An unexpected error occurred: {str(e)}"
 
 @app.route("/")
@@ -98,5 +96,3 @@ def ask():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
-
