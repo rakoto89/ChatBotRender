@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify, render_template
 import os
 import pdfplumber
-import openai  # Correct OpenAI import
+import openai
+import traceback
 
 # Load the OpenAI API key from Render's secret file
 try:
@@ -33,25 +34,18 @@ def extract_text_from_pdf(pdf_path):
 
 pdf_text = extract_text_from_pdf(PDF_PATH)
 
+# List of key topics related to opioids (from the PDF context)
+relevant_topics = [
+    "opioids", "addiction", "overdose", "withdrawal", "fentanyl", "heroin", "painkillers",
+    "narcotics", "opioid crisis", "naloxone", "rehab"
+]
+
 def is_question_relevant(question):
-    relevance_prompt = (
-        "Determine if the following question is related to opioids OR related topics such as overdose, withdrawal, "
-        "prescription painkillers, fentanyl, narcotics, analgesics, opiates, opioid crisis, addiction, naloxone, or rehab. "
-        "Respond with 'yes' if it is related and 'no' if it is not.\n\n"
-        f"Question: {question}"
-    )
-    
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": relevance_prompt}],
-            max_tokens=10,
-            temperature=0,
-        )
-        return response['choices'][0]['message']['content'].strip().lower() == "yes"
-    except Exception as e:
-        print(f"Error occurred in is_question_relevant: {e}")
-        return False
+    # Check if the question contains any of the relevant opioid-related topics
+    for topic in relevant_topics:
+        if topic.lower() in question.lower():
+            return True
+    return False
 
 def get_gpt3_response(question, context):
     opioid_context = (
@@ -87,12 +81,16 @@ def ask():
     if not user_question:
         return jsonify({"answer": "Please ask a valid question."})
 
+    # Check if the question is relevant to opioids or related topics in the PDF
     if is_question_relevant(user_question):
+        # If relevant, fetch the answer based on the content of the PDF
         answer = get_gpt3_response(user_question, pdf_text)
     else:
+        # If not relevant, return a default message
         answer = "Sorry, I can only answer questions related to opioids, addiction, overdose, or withdrawal."
 
     return jsonify({"answer": answer})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
